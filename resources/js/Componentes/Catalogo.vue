@@ -1,51 +1,99 @@
 <template>
   <div class="contenedor">
-    <header class="header">
-      <h1 class="titulo">ElectroPeru 🛒</h1>
-      <nav>
-        <button @click="$emit('abrir-carrito')" class="nav-link">🛍️ Ver carrito</button>
-      </nav>
-    </header>
-
-    <div v-if="productos.length === 0" class="loading">Cargando productos...</div>
-
-    <div v-else class="productos">
-      <div v-for="producto in productos" :key="producto.id" class="producto">
-        <img :src="`/images/${producto.imagen}`" alt="Imagen" class="producto-img" />
-        <h3 class="producto-nombre">{{ producto.nombre }}</h3>
-        <p class="producto-precio">S/. {{ producto.precio }}</p>
-        <button @click="agregarAlCarrito(producto)" class="btn-agregar">Agregar al carrito</button>
+    <!-- Buscador -->
+    <div class="buscador">
+      <div class="input-con-icono">
+        <input
+          type="text"
+          v-model="busqueda"
+          placeholder="Buscar productos por nombre..."
+          class="input-busqueda"
+        />
+        <span class="icono-lupa">🔍</span>
       </div>
     </div>
+
+    <!-- Cargando o sin resultados -->
+    <div v-if="productosFiltrados.length === 0" class="loading">
+      No se encontraron productos.
+    </div>
+
+    <!-- Productos -->
+    <div v-else class="productos">
+      <div
+        v-for="producto in productosFiltrados"
+        :key="producto.id"
+        class="producto"
+      >
+        <img
+          :src="`/images/${producto.imagen}`"
+          alt="Imagen"
+          class="producto-img"
+          @click="mostrarDetalle(producto)"
+        />
+        <h3 class="producto-nombre" @click="mostrarDetalle(producto)">
+          {{ producto.nombre }}
+        </h3>
+        <p class="producto-precio">
+          S/. {{ parseFloat(producto.precio).toFixed(2) }}
+        </p>
+        <button @click="agregarAlCarrito(producto)" class="btn-agregar">
+          Agregar al carrito
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal de detalle -->
+    <DetalleProducto
+      v-if="productoSeleccionado"
+      :producto="productoSeleccionado"
+      @cerrar="productoSeleccionado = null"
+    />
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import DetalleProducto from './DetalleProducto.vue';
 
 export default {
   name: 'Catalogo',
+  components: {
+    DetalleProducto
+  },
   data() {
     return {
       productos: [],
+      busqueda: '',
+      productoSeleccionado: null
     };
   },
+  computed: {
+    productosFiltrados() {
+      return this.productos.filter((p) =>
+        p.nombre.toLowerCase().includes(this.busqueda.toLowerCase())
+      );
+    }
+  },
   mounted() {
-    axios.get('/productos')
-      .then(res => {
+    axios
+      .get('/productos')
+      .then((res) => {
         this.productos = res.data;
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('Error al cargar productos:', err);
       });
   },
   methods: {
     agregarAlCarrito(producto) {
-  let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
-  carrito.push(producto); // Puedes mantener esto si haces la agrupación luego en Carrito.vue
-  localStorage.setItem('carrito', JSON.stringify(carrito));
-}
-
+      let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+      carrito.push(producto);
+      localStorage.setItem('carrito', JSON.stringify(carrito));
+    },
+    mostrarDetalle(producto) {
+      this.productoSeleccionado = producto;
+    }
   }
 };
 </script>
@@ -56,32 +104,6 @@ body {
   background-color: #f9f9f9;
 }
 
-.header {
-  background-color: #0c5;
-  color: white;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 0 0 15px 15px;
-}
-
-.nav-link {
-  color: white;
-  font-weight: bold;
-  text-decoration: none;
-  background-color: #fff2;
-  padding: 6px 12px;
-  border-radius: 8px;
-  transition: background 0.3s;
-  border: none;
-  cursor: pointer;
-}
-
-.nav-link:hover {
-  background-color: #fff5;
-}
-
 .contenedor {
   max-width: 1200px;
   margin: 2rem auto;
@@ -89,20 +111,52 @@ body {
   font-family: "Segoe UI", sans-serif;
 }
 
-.titulo {
-  font-size: 1.8rem;
+/* Buscador */
+.buscador {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.input-con-icono {
+  position: relative;
+  width: 60%;
+}
+
+.input-busqueda {
+  width: 100%;
+  padding: 10px 40px 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+
+.input-busqueda:focus {
+  box-shadow: 0 0 6px #0c5;
+}
+
+.icono-lupa {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: #888;
 }
 
 .loading {
   text-align: center;
   font-size: 1.2rem;
+  color: #999;
 }
 
 .productos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 25px;
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .producto {
